@@ -229,3 +229,14 @@ loadImage path = do
 
 
 -------------------------------------------------------------
+
+--createMatrix :: Int -> Int -> Int -> Int -> [[a]] -> [a]
+--createMatrix i j w h m = 
+--    [ m !! (clamp (i+di) 0 h) !! (clamp (j+dj) 0 w) | di<-[-1..1], dj<-[-1..1] ] 
+   
+
+
+--clamp :: Ord a => a -> a -> a -> a
+--clamp x a b = max a (min x b) 
+ 
+-- \(x,y) -> (mod (x+h) h, mod (y+w) w) 
