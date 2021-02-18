@@ -1,13 +1,20 @@
 module Task2 where
 import Data.Word ( Word8 )
+import System.IO ()
+import Control.Monad.State (join)
 
 data Rgb = Rgb { red   :: Word8
                , green :: Word8
-               , blue  :: Word8 } deriving (Show,Read,Eq)
+               , blue  :: Word8 } deriving (Show,Read)
+
+instance Eq Rgb where Rgb red1 green1 blue1 == Rgb red2 green2 blue2 = red1 == red2 && green1 == green2 && blue1 == blue2
 
 data Image = Image { width   :: Int
                    , height  :: Int
-                   , content :: [[Rgb]] } deriving (Show,Read,Eq)
+                   , content :: [[Rgb]] } deriving (Show,Read)
+
+instance Eq Image where
+                     Image width1 height1 content1 == Image width2 height2 content2 = width1 == width2 && height1 == height2 && content1 == content2
 
 
 example :: Image
@@ -18,28 +25,6 @@ grayExample :: Image
 grayExample = Image 3 2 [[Rgb 76 76 76, Rgb 122 122 122, Rgb 227 227 227],
                          [Rgb 150 150 150, Rgb 255 255 255, Rgb 203 203 203]]
 
-
-example2 :: Image
-example2 = Image 4 5 [[Rgb 71 71 71,    Rgb 41 41 41, Rgb 16 16 16,    Rgb 138 138 138], 
-                      [Rgb 26 26 26,    Rgb 40 40 40, Rgb 138 138 138, Rgb 73 73 73] , 
-                      [Rgb 184 184 184, Rgb 40 40 40, Rgb 40 40 40,    Rgb 40 40 40] , 
-                      [Rgb 40 40 40,    Rgb 40 40 40, Rgb 182 182 182, Rgb 16 16 16] , 
-                      [Rgb 39 39 39,    Rgb 81 81 81, Rgb 158 158 158, Rgb 15 15 15]]
-
--- floodFill pixel 2 1 example2
---                       [Rgb 71 71 71,    Rgb 41 41 41, Rgb 16 16 16,    Rgb 138 138 138],
---                       [Rgb 26 26 26,    Rgb 50 50 50, Rgb 138 138 138, Rgb 73 73 73],
---                       [Rgb 184 184 184, Rgb 50 50 50, Rgb 50 50 50,    Rgb 50 50 50],
---                       [Rgb 50 50 50,    Rgb 50 50 50, Rgb 182 182 182, Rgb 16 16 16],
---                       [Rgb 39 39 39,    Rgb 81 81 81, Rgb 158 158 158, Rgb 15 15 15]]
-
---    [[Rgb 76 76 76, Rgb 122 122 122,   Rgb 226 226 226],
---    [Rgb 150 150 150, Rgb 255 255 255, Rgb 202 202 202]]
-
-matrixExample = [[1, 2, 3, 4],
-                 [5, 6, 7, 8],
-                 [9, 10, 11, 12],
-                 [13, 14, 15, 16]]
 
 
 toInt :: (RealFrac a, Integral b) => a -> b
@@ -87,15 +72,15 @@ matrix1 = [[1,0,-1],[2,0,-2], [1,0,-1]]
 matrix2 :: [[Integer]]
 matrix2 = [[1,2,1],[0,0,0],[-1,-2,-1]]
 
-multiplicate :: [[Integer]] -> [[Integer ]] -> Integer   
-multiplicate m1 m2 = (m1!!2!!2 * m2!!0!!0) + (m1!!2!!1 * m2!!0!!1) + (m1!!2!!0 * m2!!0!!2) + (m1!!1!!2 * m2!!1!!0) + (m1!!1!!1 * m2!!1!!1) + (m1!!1!!0 * m2!!1!!2) + (m1!!0!!2 * m2!!2!!0) + (m1!!0!!1 * m2!!2!!1) + (m1!!0!!0 * m2!!2!!2)
+multiply :: [[Integer]] -> [[Integer ]] -> Integer   
+multiply m1 m2 = (m1!!2!!2 * m2!!0!!0) + (m1!!2!!1 * m2!!0!!1) + (m1!!2!!0 * m2!!0!!2) + (m1!!1!!2 * m2!!1!!0) + (m1!!1!!1 * m2!!1!!1) + (m1!!1!!0 * m2!!1!!2) + (m1!!0!!2 * m2!!2!!0) + (m1!!0!!1 * m2!!2!!1) + (m1!!0!!0 * m2!!2!!2)
 
 enum :: Integer -> Integer -> Integer  -> Integer  -> Integer  -> Integer  -> Integer  -> Integer  -> Integer  -> Rgb
 enum a00 a01 a02 a10 a11 a12 a20 a21 a22  =
     let 
         matrix = [[a00, a01, a02], [a10, a11, a12], [a20, a21, a22]]
-        num1 = multiplicate matrix matrix1
-        num2 = multiplicate matrix matrix2
+        num1 = multiply matrix matrix1
+        num2 = multiply matrix matrix2
         newValue = toInt (sqrt (fromIntegral (num1^2 + num2^2)))
     in case () of 
     _ | newValue >= 255 -> Rgb { red= toEnum 255, green = toEnum 255, blue = toEnum 255}
@@ -189,4 +174,58 @@ floodFill color x y img = Image {
 
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+getRow :: [Rgb] -> String 
+getRow []     = ""
+getRow (x:xs) = show (red x) ++ " " ++ show (green x) ++ " " ++ show (blue x) ++ "\n" ++ (getRow xs)
 
+getContent :: [[Rgb]] -> String
+getContent []     = ""
+getContent (x:xs) = getRow x ++ getContent xs
+
+makeString :: Image -> String
+makeString img = "P3\n" ++ show (width img) ++ " " ++ show (height img) ++ "\n255\n" ++ (getContent (content img))
+
+saveImage :: FilePath -> Image -> IO()
+saveImage path img = writeFile path (makeString img)
+
+-----------------------------------------------------------------------------------
+
+makePixel :: String -> Rgb
+makePixel str = 
+    let 
+        list = words str
+        red   =  read (head list)
+        green =  read (list!!1) 
+        blue  =  read (list!!2) 
+    in 
+        Rgb red green blue
+
+getPixels :: [String] -> [Rgb]
+getPixels = map makePixel
+
+--можем да проверим дали имаме грешка ако w*x/= length list
+separatePixels :: Int -> Int -> [Rgb] -> [[Rgb]]
+separatePixels _ _ []     = []
+--separatePixels _ 0 pixels = [] 
+-- separatePixels _ x []     = undefined 
+separatePixels w h pixels = take w pixels: separatePixels w (h-1) (drop w pixels) 
+
+
+makeImage :: String -> IO Image
+makeImage str = do
+    let
+        listStr = lines str
+        wordsStr = words (listStr!!1) 
+        w = read (head wordsStr)
+        h = read (head (tail wordsStr))
+        c = separatePixels w h (getPixels (drop 3 listStr))
+    return (Image w h c)
+
+loadImage :: String -> IO Image
+loadImage path = do
+            str <- readFile path 
+            makeImage str 
+
+
+
+-------------------------------------------------------------
